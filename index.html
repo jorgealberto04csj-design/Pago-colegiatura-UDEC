@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pago de colegiatura</title>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--tx:#17202e;--mut:#667085;--bd:#dde2ec;--pri:#1c6ee4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:460px;margin:0 auto;padding:16px}
+.head{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.head img{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#eee}
+.head .amt{font-size:26px;font-weight:700}
+.head .ref{color:var(--mut);font-size:12px;word-break:break-all}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px}
+label{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+input,select{width:100%;height:46px;padding:0 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-size:15px}
+.row{display:flex;gap:10px}.row>div{flex:1}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:var(--pri);color:#fff;font-size:16px;font-weight:600;margin-top:14px}
+button:disabled{opacity:.5}
+.brands{display:flex;gap:14px;justify-content:center;margin-top:14px;color:var(--mut);font-size:13px}
+.msg{font-size:13px;margin-top:10px;min-height:16px}
+.msg.err{color:#d92d20}.msg.ok{color:#1a9d5c}
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <div>
+      <div class="amt" id="amt">$0.00 MXN</div>
+      <div id="concepto" style="font-weight:600">Concepto</div>
+      <div class="ref" id="ref"></div>
+    </div>
+  </div>
+
+  <form id="form-checkout" class="card">
+    <div id="form-checkout__cardNumber" style="height:46px;border:1px solid var(--bd);border-radius:10px;padding:0 12px;display:flex;align-items:center"></div>
+    <label>Nombre del titular</label>
+    <input type="text" id="form-checkout__cardholderName" placeholder="Como aparece en la tarjeta">
+    <div class="row">
+      <div><label>Vencimiento</label><div id="form-checkout__expirationDate" style="height:46px;border:1px solid var(--bd);border-radius:10px;padding:0 12px;display:flex;align-items:center"></div></div>
+      <div><label>CVV</label><div id="form-checkout__securityCode" style="height:46px;border:1px solid var(--bd);border-radius:10px;padding:0 12px;display:flex;align-items:center"></div></div>
+    </div>
+    <label>Tipo de documento</label>
+    <select id="form-checkout__identificationType"></select>
+    <label>Número de documento</label>
+    <input type="text" id="form-checkout__identificationNumber" placeholder="CURP / RFC">
+    <label>Correo electrónico</label>
+    <input type="email" id="form-checkout__cardholderEmail" placeholder="tucorreo@ejemplo.com">
+    <label>Banco emisor</label>
+    <select id="form-checkout__issuer"></select>
+    <label>Cuotas</label>
+    <select id="form-checkout__installments"></select>
+    <button type="submit" id="btn">Pagar</button>
+    <div class="msg" id="msg"></div>
+    <div class="brands">💳 Visa · Mastercard · Amex</div>
+  </form>
+</main>
+
+<script>
+// ===== CONFIGURA AQUÍ =====
+const PUBLIC_KEY = "TU_PUBLIC_KEY_DE_MERCADO_PAGO";
+const MONTO = 14940.00;          // monto a cobrar
+const CONCEPTO = "Colegiatura octubre";
+const REFERENCIA = "COL-2026-10-0001"; // tu folio/referencia interna
+const BACKEND_URL = "/api/pagar"; // si despliegas en Vercel, no lo cambies
+// ===========================
+
+document.getElementById("amt").textContent =
+  new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(MONTO);
+document.getElementById("concepto").textContent = CONCEPTO;
+document.getElementById("ref").textContent = "Ref: " + REFERENCIA;
+
+const mp = new MercadoPago(PUBLIC_KEY, { locale: "es-MX" });
+
+const cardForm = mp.cardForm({
+  amount: String(MONTO),
+  iframe: true,
+  form: {
+    id: "form-checkout",
+    cardNumber: { id: "form-checkout__cardNumber", placeholder: "Número de tarjeta" },
+    expirationDate: { id: "form-checkout__expirationDate", placeholder: "MM/AA" },
+    securityCode: { id: "form-checkout__securityCode", placeholder: "CVV" },
+    cardholderName: { id: "form-checkout__cardholderName" },
+    cardholderEmail: { id: "form-checkout__cardholderEmail" },
+    issuer: { id: "form-checkout__issuer", placeholder: "Banco emisor" },
+    installments: { id: "form-checkout__installments", placeholder: "Cuotas" },
+    identificationType: { id: "form-checkout__identificationType" },
+    identificationNumber: { id: "form-checkout__identificationNumber" },
+  },
+  callbacks: {
+    onFormMounted: (error) => { if (error) console.warn("Error montando formulario:", error); },
+    onSubmit: async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById("btn");
+      const msg = document.getElementById("msg");
+      btn.disabled = true; msg.className = "msg"; msg.textContent = "Procesando pago…";
+
+      const data = cardForm.getCardFormData();
+
+      try {
+        const resp = await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: data.token,
+            payment_method_id: data.paymentMethodId,
+            issuer_id: data.issuerId,
+            installments: Number(data.installments),
+            email: data.cardholderEmail,
+            identification: {
+              type: data.identificationType,
+              number: data.identificationNumber,
+            },
+            amount: MONTO,
+            description: CONCEPTO,
+            referencia: REFERENCIA,
+          }),
+        });
+        const result = await resp.json();
+
+        if (resp.ok && (result.status === "approved")) {
+          msg.className = "msg ok";
+          msg.textContent = "✓ Pago aprobado. Folio: " + result.id;
+        } else {
+          msg.className = "msg err";
+          msg.textContent = "Pago rechazado: " + (result.status_detail || result.error || "intenta con otra tarjeta.");
+          btn.disabled = false;
+        }
+      } catch (e) {
+        msg.className = "msg err";
+        msg.textContent = "Error de conexión. Intenta de nuevo.";
+        btn.disabled = false;
+      }
+    },
+  },
+});
+</script>
+</body>
+</html>
