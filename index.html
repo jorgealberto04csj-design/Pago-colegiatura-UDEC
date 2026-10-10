@@ -90,7 +90,6 @@ const cardForm = mp.cardForm({
     cardholderEmail: { id: "form-checkout__cardholderEmail" },
     issuer: { id: "form-checkout__issuer", placeholder: "Banco emisor" },
     installments: { id: "form-checkout__installments", placeholder: "Cuotas" },
-    identificationType: { id: "form-checkout__identificationType" },
     identificationNumber: { id: "form-checkout__identificationNumber" },
   },
   callbacks: {
@@ -113,10 +112,10 @@ const cardForm = mp.cardForm({
             issuer_id: data.issuerId,
             installments: Number(data.installments),
             email: data.cardholderEmail,
-            identification: {
-              type: data.identificationType,
-              number: data.identificationNumber,
-            },
+         identification: {
+  type: document.getElementById("form-checkout__identificationType").value,
+  number: data.identificationNumber,
+},
             amount: MONTO,
             description: CONCEPTO,
             referencia: REFERENCIA,
