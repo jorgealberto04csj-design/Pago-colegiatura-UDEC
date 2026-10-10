@@ -55,7 +55,8 @@ export default async function handler(req, res) {
     });
 
     const result = await mpResp.json();
-    return res.status(mpResp.status).json(result);
+console.log("Respuesta Mercado Pago:", JSON.stringify(result));
+return res.status(mpResp.status).json(result);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message || "Error al procesar el pago" });
