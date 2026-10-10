@@ -43,8 +43,11 @@ button:disabled{opacity:.5}
       <div><label>Vencimiento</label><div id="form-checkout__expirationDate" style="height:46px;border:1px solid var(--bd);border-radius:10px;padding:0 12px;display:flex;align-items:center"></div></div>
       <div><label>CVV</label><div id="form-checkout__securityCode" style="height:46px;border:1px solid var(--bd);border-radius:10px;padding:0 12px;display:flex;align-items:center"></div></div>
     </div>
-    <label>Tipo de documento</label>
-    <select id="form-checkout__identificationType"></select>
+<label>Tipo de documento</label>
+<select id="form-checkout__identificationType">
+  <option value="RFC">RFC</option>
+  <option value="CURP">CURP</option>
+</select>
     <label>Número de documento</label>
     <input type="text" id="form-checkout__identificationNumber" placeholder="CURP / RFC">
     <label>Correo electrónico</label>
